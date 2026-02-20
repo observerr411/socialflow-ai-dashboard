@@ -6,7 +6,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
 node_modules
 dist
 dist-ssr
@@ -14,7 +13,6 @@ dist-electron
 out
 release
 *.local
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -25,7 +23,6 @@ release
 *.njsproj
 *.sln
 *.sw?
-
 # Project Tracking
 tasks.md
 task.md

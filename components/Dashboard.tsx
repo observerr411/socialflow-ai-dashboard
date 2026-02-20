@@ -25,7 +25,7 @@ const activityData = [
   { id: 4, type: 'comment', platform: 'Facebook', text: 'High engagement on recent ad', time: '8h ago' },
 ];
 
-export const Dashboard: React.FC<ViewProps> = ({ onNavigate }) => {
+export const Dashboard: React.FC<ViewProps> = () => {
   const [timeRange, setTimeRange] = useState('Last 7 Days');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);

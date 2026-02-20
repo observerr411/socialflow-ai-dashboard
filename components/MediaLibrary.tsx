@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card } from './ui/Card';
 import { ViewProps } from '../types';
+import ipfsService from '../src/blockchain/services/IPFSService'
 
 const MaterialIcon = ({ name, className }: { name: string, className?: string }) => (
   <span className={`material-symbols-outlined ${className}`}>{name}</span>
@@ -40,18 +41,32 @@ export const MediaLibrary: React.FC<ViewProps> = () => {
 
   useOutsideAlerter(menuRef, () => setOpenMenuId(null));
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0];
-        const newItem = {
-            id: Date.now(),
-            type: file.type.startsWith('video') ? 'video' : 'image',
-            url: URL.createObjectURL(file),
-            name: file.name
-        };
-        setMediaItems([newItem, ...mediaItems]);
-    }
-  };
+   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files || e.target.files.length === 0) return
+      const files = Array.from(e.target.files)
+      const addedItems = files.map((file) => ({
+         id: Date.now() + Math.random(),
+         type: file.type.startsWith('video') ? 'video' : 'image',
+         url: URL.createObjectURL(file),
+         name: file.name,
+         uploading: true,
+      }))
+      setMediaItems((prev) => [...addedItems, ...prev])
+
+      // Upload each file and replace the local URL with gateway URL on success
+      for (let i = 0; i < files.length; i++) {
+         const file = files[i]
+         const localId = addedItems[i].id
+         try {
+            const result = await ipfsService.uploadFile(file, (_uploaded, _total) => {
+               // could map progress into UI per-file using state if desired
+            })
+            setMediaItems((prev) => prev.map((it) => (it.id === localId ? { ...it, url: result.gatewayUrl, uploading: false } : it)))
+         } catch (err) {
+            setMediaItems((prev) => prev.map((it) => (it.id === localId ? { ...it, uploading: false, uploadError: true } : it)))
+         }
+      }
+   }
   
   const deleteItem = (id: number) => {
       setMediaItems(prev => prev.filter(item => item.id !== id));

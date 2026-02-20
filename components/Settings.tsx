@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ViewProps } from '../types';
 
-export const Settings: React.FC<ViewProps> = ({ onNavigate }) => {
+export const Settings: React.FC<ViewProps> = () => {
   // State for toggles (all enabled by default)
   const [darkMode, setDarkMode] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);

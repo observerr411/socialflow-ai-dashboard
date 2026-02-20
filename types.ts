@@ -59,3 +59,34 @@ export enum Platform {
   LINKEDIN = 'linkedin',
   X = 'x'
 }
+
+export enum View {
+  DASHBOARD = 'DASHBOARD',
+  ANALYTICS = 'ANALYTICS',
+  CALENDAR = 'CALENDAR',
+  CREATE_POST = 'CREATE_POST',
+  MEDIA_LIBRARY = 'MEDIA_LIBRARY',
+  INBOX = 'INBOX',
+  SETTINGS = 'SETTINGS',
+  PORTFOLIO = 'PORTFOLIO'
+}
+
+export interface BlockchainAsset {
+  code: string;
+  issuer: string;
+  balance: string;
+  limit?: string;
+  value?: number;
+  price?: number;
+}
+
+export interface PortfolioSummary {
+  totalValue: number;
+  assets: BlockchainAsset[];
+  currency: string;
+  lastUpdated: Date;
+}
+
+export type AssetFilter = 'all' | 'tokens' | 'nfts' | 'zero_balance';
+export type AssetSort = 'name' | 'balance' | 'value';
+export type SortDirection = 'asc' | 'desc';
