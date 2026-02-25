@@ -59,3 +59,37 @@ export enum Platform {
   LINKEDIN = 'linkedin',
   X = 'x'
 }
+
+// Wallet Analytics Types
+export interface WalletData {
+  address: string;
+  portfolioValue: number;
+  tokens: TokenHolding[];
+  followerEngagement: number;
+  lastActive: Date;
+}
+
+export interface TokenHolding {
+  symbol: string;
+  amount: number;
+  value: number;
+  holdingDuration: number;
+}
+
+export interface WealthSegment {
+  tier: 'whale' | 'dolphin' | 'shrimp';
+  minValue: number;
+  maxValue: number;
+  count: number;
+  engagementRate: number;
+  conversionRate: number;
+  growthRate: number;
+}
+
+export interface AudienceWealthMetrics {
+  averagePortfolioValue: number;
+  totalWallets: number;
+  commonTokens: { symbol: string; holders: number; avgHoldingDuration: number }[];
+  wealthTrends: { date: string; avgValue: number }[];
+  segments: WealthSegment[];
+}
