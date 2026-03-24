@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import aiRoutes from './routes/ai';
 import healthRoutes from './routes/health';
 import statusRoutes from './routes/status';
+import videoRoutes from './routes/video';
 
 const app: Express = express();
 
@@ -19,5 +20,6 @@ app.use(morgan('dev'));
 app.use('/ai', aiRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/status', statusRoutes);
+app.use('/api/video', videoRoutes);
 
 export default app;
