@@ -3,63 +3,179 @@ import { getBackendPort } from './config/runtime';
 import { startDataPruningJob, stopDataPruningJob } from './jobs/dataPruningJob';
 import { startWorkerMonitor, stopWorkerMonitor } from './monitoring/workerMonitorInstance';
 import { createLogger } from './lib/logger';
+import { prisma } from './lib/prisma';
+import { Server } from 'http';
 
 const logger = createLogger('server');
 const PORT = getBackendPort();
 
-const bootstrap = async (): Promise<void> => {
-  try {
-    await startWorkerMonitor();
-  } catch (error) {
-    logger.error(
-      `Failed to start monitor: ${error instanceof Error ? error.message : String(error)}`,
-    );
+let serverInstance: Server | null = null;
+let isShuttingDown = false;
+
+/**
+ * Graceful shutdown handler
+ * Closes all connections and cleans up resources before exiting
+ */
+const gracefulShutdown = async (signal: string, exitCode: number = 0): Promise<void> => {
+  // Prevent multiple shutdown calls
+  if (isShuttingDown) {
+    logger.warn('Shutdown already in progress, ignoring duplicate signal');
+    return;
   }
 
+  isShuttingDown = true;
+  logger.info(`Received ${signal}. Starting graceful shutdown...`);
+
+  // Set a timeout to force exit if graceful shutdown takes too long
+  const forceExitTimeout = setTimeout(() => {
+    logger.error('Graceful shutdown timeout exceeded, forcing exit');
+    process.exit(1);
+  }, 30000); // 30 seconds timeout
+
   try {
-    await startDataPruningJob();
-  } catch (error) {
-    logger.error(
-      `Failed to start scheduler: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
+    // Stop accepting new connections
+    if (serverInstance) {
+      await new Promise<void>((resolve, reject) => {
+        serverInstance!.close((err) => {
+          if (err) {
+            logger.error('Error closing HTTP server', { error: err });
+            reject(err);
+          } else {
+            logger.info('HTTP server closed');
+            resolve();
+          }
+        });
+      });
+    }
 
-  const server = app.listen(PORT, () => {
-    logger.info(`🚀 SocialFlow Backend is running on http://localhost:${PORT}`);
-  });
-
-  const shutdown = async (signal: string): Promise<void> => {
-    logger.info(`Received ${signal}. Starting graceful shutdown...`);
-
+    // Stop worker monitor
     try {
       await stopWorkerMonitor();
+      logger.info('Worker monitor stopped');
     } catch (error) {
-      logger.error(
-        `Failed to stop monitor: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      logger.error('Failed to stop worker monitor', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
+    // Stop data pruning job
     try {
       await stopDataPruningJob();
+      logger.info('Data pruning job stopped');
     } catch (error) {
-      logger.error(
-        `Failed to stop scheduler: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      logger.error('Failed to stop data pruning job', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
-    server.close(() => {
-      logger.info('Shutdown complete');
-      process.exit(0);
+    // Close database connections
+    try {
+      await prisma.$disconnect();
+      logger.info('Database connections closed');
+    } catch (error) {
+      logger.error('Failed to close database connections', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    clearTimeout(forceExitTimeout);
+    logger.info('Shutdown complete');
+    process.exit(exitCode);
+  } catch (error) {
+    clearTimeout(forceExitTimeout);
+    logger.error('Error during graceful shutdown', {
+      error: error instanceof Error ? error.message : String(error),
     });
-  };
+    process.exit(1);
+  }
+};
 
-  process.on('SIGINT', () => {
-    void shutdown('SIGINT');
+/**
+ * Global uncaught exception handler
+ * Logs the error and initiates graceful shutdown
+ */
+process.on('uncaughtException', (error: Error) => {
+  logger.error('UNCAUGHT EXCEPTION - Application will terminate', {
+    error: error.message,
+    stack: error.stack,
+    name: error.name,
   });
 
-  process.on('SIGTERM', () => {
-    void shutdown('SIGTERM');
+  // Give some time for logs to flush before exiting
+  setTimeout(() => {
+    void gracefulShutdown('uncaughtException', 1);
+  }, 1000);
+});
+
+/**
+ * Global unhandled promise rejection handler
+ * Logs the rejection and initiates graceful shutdown
+ */
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  logger.error('UNHANDLED REJECTION - Application will terminate', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+    promise: String(promise),
   });
+
+  // Give some time for logs to flush before exiting
+  setTimeout(() => {
+    void gracefulShutdown('unhandledRejection', 1);
+  }, 1000);
+});
+
+/**
+ * Handle process termination signals
+ */
+process.on('SIGINT', () => {
+  void gracefulShutdown('SIGINT', 0);
+});
+
+process.on('SIGTERM', () => {
+  void gracefulShutdown('SIGTERM', 0);
+});
+
+/**
+ * Bootstrap the application
+ */
+const bootstrap = async (): Promise<void> => {
+  try {
+    // Start worker monitor
+    try {
+      await startWorkerMonitor();
+      logger.info('Worker monitor started');
+    } catch (error) {
+      logger.error('Failed to start worker monitor', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Start data pruning job
+    try {
+      await startDataPruningJob();
+      logger.info('Data pruning job started');
+    } catch (error) {
+      logger.error('Failed to start data pruning job', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Start HTTP server
+    serverInstance = app.listen(PORT, () => {
+      logger.info(`🚀 SocialFlow Backend is running on http://localhost:${PORT}`);
+    });
+
+    // Handle server errors
+    serverInstance.on('error', (error: Error) => {
+      logger.error('Server error', { error: error.message, stack: error.stack });
+    });
+  } catch (error) {
+    logger.error('Failed to bootstrap application', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    process.exit(1);
+  }
 };
 
 void bootstrap();
