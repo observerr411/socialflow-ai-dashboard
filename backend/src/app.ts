@@ -32,6 +32,9 @@ app.get('/health', (req, res) => {
 // app.use('/api/auth', authRoutes);
 // app.use('/api/users', userRoutes);
 
+import youtubeRoutes from './routes/youtube';
+app.use('/api/youtube', youtubeRoutes);
+
 // 404 handler - must be after all routes
 app.use(notFoundHandler);
 
