@@ -1,4 +1,5 @@
 import { circuitBreakerService } from './CircuitBreakerService';
+import { LockService } from '../utils/LockService';
 import { createLogger } from '../lib/logger';
 
 const logger = createLogger('facebook-service');
@@ -194,62 +195,64 @@ class FacebookService {
    * Post text or image content to a Facebook Page
    */
   public async postToPage(request: FacebookPostRequest): Promise<FacebookPagePost> {
-    return circuitBreakerService.execute(
-      'facebook',
-      async () => {
-        const pageAccessToken = request.imageUrl 
-          ? await this.getPageAccessTokenForPost(request.pageId)
-          : await this.getPageAccessTokenForPost(request.pageId);
+    return LockService.withLock(`facebook:post:${request.pageId}`, async () => {
+      return circuitBreakerService.execute(
+        'facebook',
+        async () => {
+          const pageAccessToken = request.imageUrl 
+            ? await this.getPageAccessTokenForPost(request.pageId)
+            : await this.getPageAccessTokenForPost(request.pageId);
 
-        const params = new URLSearchParams({
-          message: request.message,
-          access_token: pageAccessToken,
-        });
+          const params = new URLSearchParams({
+            message: request.message,
+            access_token: pageAccessToken,
+          });
 
-        // Add image if provided
-        if (request.imageUrl) {
-          params.append('url', request.imageUrl);
-        }
+          // Add image if provided
+          if (request.imageUrl) {
+            params.append('url', request.imageUrl);
+          }
 
-        // Handle scheduled posts
-        if (request.scheduledTime) {
-          params.append('published', 'false');
-          params.append('scheduled_publish_time', String(Math.floor(request.scheduledTime.getTime() / 1000)));
-        }
+          // Handle scheduled posts
+          if (request.scheduledTime) {
+            params.append('published', 'false');
+            params.append('scheduled_publish_time', String(Math.floor(request.scheduledTime.getTime() / 1000)));
+          }
 
-        const endpoint = request.imageUrl 
-          ? `${API_BASE}/${request.pageId}/photos`
-          : `${API_BASE}/${request.pageId}/feed`;
+          const endpoint = request.imageUrl 
+            ? `${API_BASE}/${request.pageId}/photos`
+            : `${API_BASE}/${request.pageId}/feed`;
 
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: params.toString(),
-        });
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: params.toString(),
+          });
 
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(`Failed to post to Facebook page: ${JSON.stringify(err)}`);
-        }
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(`Failed to post to Facebook page: ${JSON.stringify(err)}`);
+          }
 
-        const data = await response.json() as any;
+          const data = await response.json() as any;
         
-        // Get the permalink for the created post
-        const permalink = await this.getPostPermalink(request.pageId, data.id, pageAccessToken);
-        
-        return {
-          id: data.id,
-          message: request.message,
-          created_time: new Date().toISOString(),
-          permalink_url: permalink,
-        };
-      },
-      async () => {
-        throw new Error('Facebook API temporarily unavailable. Post has been queued for retry.');
-      }
-    );
+          // Get the permalink for the created post
+          const permalink = await this.getPostPermalink(request.pageId, data.id, pageAccessToken);
+          
+          return {
+            id: data.id,
+            message: request.message,
+            created_time: new Date().toISOString(),
+            permalink_url: permalink,
+          };
+        },
+        async () => {
+          throw new Error('Facebook API temporarily unavailable. Post has been queued for retry.');
+        }
+      );
+    });
   }
 
   /**

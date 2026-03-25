@@ -1,4 +1,5 @@
 import { circuitBreakerService } from './CircuitBreakerService';
+import { LockService } from '../utils/LockService';
 
 /**
  * Twitter API Response Types
@@ -58,31 +59,33 @@ class TwitterService {
       throw new Error('Twitter API not configured. Please set TWITTER_BEARER_TOKEN.');
     }
 
-    return circuitBreakerService.execute(
-      'twitter',
-      async () => {
-        const response = await fetch(`${this.API_BASE}/tweets`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${this.bearerToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(request),
-        });
+    return LockService.withLock('twitter:post', async () => {
+      return circuitBreakerService.execute(
+        'twitter',
+        async () => {
+          const response = await fetch(`${this.API_BASE}/tweets`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.bearerToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(request),
+          });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(`Twitter API error: ${response.status} - ${JSON.stringify(error)}`);
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Twitter API error: ${response.status} - ${JSON.stringify(error)}`);
+          }
+
+          const data = await response.json();
+          return data.data;
+        },
+        async () => {
+          // Fallback: Queue for later or throw
+          throw new Error('Twitter API temporarily unavailable. Post has been queued for retry.');
         }
-
-        const data = await response.json();
-        return data.data;
-      },
-      async () => {
-        // Fallback: Queue for later or throw
-        throw new Error('Twitter API temporarily unavailable. Post has been queued for retry.');
-      }
-    );
+      );
+    });
   }
 
   /**
