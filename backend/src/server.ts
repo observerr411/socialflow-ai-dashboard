@@ -1,16 +1,22 @@
 import app from './app';
+import { SocketService } from './services/SocketService';
+import { initializeWorkers } from './jobs/workers';
+import { queueManager } from './queues/queueManager';
 import { getBackendPort } from './config/runtime';
 import { startDataPruningJob, stopDataPruningJob } from './jobs/dataPruningJob';
 import { startYouTubeSyncJob, stopYouTubeSyncJob } from './jobs/youtubeSyncJob';
 import { startWorkerMonitor, stopWorkerMonitor } from './monitoring/workerMonitorInstance';
 import { createLogger } from './lib/logger';
 import { prisma } from './lib/prisma';
+import { startWebhookWorker } from './queues/WebhookQueue';
+import { Worker } from 'bullmq';
 import { Server } from 'http';
 
 const logger = createLogger('server');
 const PORT = getBackendPort();
 
 let serverInstance: Server | null = null;
+let webhookWorker: Worker | null = null;
 let isShuttingDown = false;
 
 /**
@@ -59,6 +65,16 @@ const gracefulShutdown = async (signal: string, exitCode: number = 0): Promise<v
       });
     }
 
+    // Stop webhook delivery worker
+    try {
+      if (webhookWorker) await webhookWorker.close();
+      logger.info('Webhook worker stopped');
+    } catch (error) {
+      logger.error('Failed to stop webhook worker', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     // Stop data pruning job
     try {
       await stopDataPruningJob();
@@ -75,6 +91,16 @@ const gracefulShutdown = async (signal: string, exitCode: number = 0): Promise<v
       logger.info('YouTube sync job stopped');
     } catch (error) {
       logger.error('Failed to stop YouTube sync job', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Close job queues and workers
+    try {
+      await queueManager.closeAll();
+      logger.info('All queues and workers closed successfully');
+    } catch (error) {
+      logger.error('Failed to close queues', {
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -151,6 +177,10 @@ process.on('SIGTERM', () => {
  */
 const bootstrap = async (): Promise<void> => {
   try {
+    // Initialize job queue workers
+    logger.info('Initializing job queue workers...');
+    initializeWorkers();
+
     // Start worker monitor
     try {
       await startWorkerMonitor();
@@ -184,7 +214,11 @@ const bootstrap = async (): Promise<void> => {
     // Start HTTP server
     serverInstance = app.listen(PORT, () => {
       logger.info(`🚀 SocialFlow Backend is running on http://localhost:${PORT}`);
+      logger.info('📬 Job Queue System initialized');
     });
+
+    // Initialize Socket.io
+    SocketService.initialize(serverInstance);
 
     // Handle server errors
     serverInstance.on('error', (error: Error) => {

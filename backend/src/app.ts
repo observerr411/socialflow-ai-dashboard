@@ -2,15 +2,20 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import healthRoutes from './routes/health';
+import jobsRoutes from './routes/jobs';
 import { requestIdMiddleware } from './middleware/requestId';
 import { errorHandler, notFoundHandler } from './middleware/error';
+import webhookRoutes from './routes/webhooks';
+import realtimeRoutes from './routes/realtime';
+import ttsRoutes from './routes/tts';
 
 const app: Application = express();
 
 // Security middleware
 app.use(helmet());
 
-// CORS
+// CORS — allow EventSource connections
 app.use(cors());
 
 // Request ID middleware (must be first to ensure all logs have request ID)
@@ -23,14 +28,14 @@ app.use(express.urlencoded({ extended: true }));
 // Logging middleware (after request ID so logs include the ID)
 app.use(morgan('combined'));
 
+// Routes
+app.use('/api/health', healthRoutes);
+app.use('/api', jobsRoutes);
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
-// TODO: Add your routes here
-// app.use('/api/auth', authRoutes);
-// app.use('/api/users', userRoutes);
 
 import youtubeRoutes from './routes/youtube';
 app.use('/api/youtube', youtubeRoutes);
