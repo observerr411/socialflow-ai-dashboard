@@ -23,6 +23,7 @@
     "@opentelemetry/sdk-node": "^0.213.0",
     "@opentelemetry/sdk-trace-base": "^2.6.0",
     "@opentelemetry/semantic-conventions": "^1.40.0",
+    "@prisma/client": "^7.5.0",
     "@prisma/instrumentation": "^7.5.0",
     "bullmq": "^5.58.0",
     "commander": "^14.0.3",
