@@ -6,6 +6,10 @@
     "**/__tests__/**/*.test.ts",
     "**/*.test.ts"
   ],
+  "moduleNameMapper": {
+    "^uuid$": "<rootDir>/src/__tests__/integration/__mocks__/uuid.js",
+    "^.*/services/geminiService$": "<rootDir>/src/__tests__/integration/__mocks__/geminiService.js"
+  },
   "collectCoverageFrom": [
     "src/**/*.ts",
     "!src/**/*.d.ts",
@@ -18,5 +22,61 @@
     "global": {
       "lines": 50
     }
-  }
+  },
+  "projects": [
+    {
+      "displayName": "unit",
+      "preset": "ts-jest",
+      "testEnvironment": "node",
+      "roots": ["<rootDir>/src"],
+      "testMatch": ["**/__tests__/*.test.ts", "**/tests/**/*.test.ts", "**/services/__tests__/**/*.test.ts"],
+      "moduleNameMapper": {
+        "^uuid$": "<rootDir>/src/__tests__/integration/__mocks__/uuid.js",
+        "^.*/services/geminiService$": "<rootDir>/src/__tests__/integration/__mocks__/geminiService.js"
+      }
+    },
+    {
+      "displayName": "e2e",
+      "preset": "ts-jest",
+      "testEnvironment": "node",
+      "roots": ["<rootDir>/src"],
+      "testMatch": ["**/__tests__/integration/*.e2e.test.ts"],
+      "moduleNameMapper": {
+        "^uuid$": "<rootDir>/src/__tests__/integration/__mocks__/uuid.js",
+        "^.*/services/geminiService$": "<rootDir>/src/__tests__/integration/__mocks__/geminiService.js"
+      },
+      "transform": {
+        "^.+\\.tsx?$": ["ts-jest", { "diagnostics": false }]
+      },
+      "testTimeout": 15000
+    },
+    {
+      "displayName": "db",
+      "preset": "ts-jest",
+      "testEnvironment": "node",
+      "roots": ["<rootDir>/src"],
+      "testMatch": ["**/__tests__/database/*.db.test.ts"],
+      "moduleNameMapper": {
+        "^uuid$": "<rootDir>/src/__tests__/integration/__mocks__/uuid.js"
+      },
+      "transform": {
+        "^.+\\.tsx?$": ["ts-jest", { "diagnostics": false }]
+      },
+      "testTimeout": 30000
+    },
+    {
+      "displayName": "mocks",
+      "preset": "ts-jest",
+      "testEnvironment": "node",
+      "roots": ["<rootDir>/src"],
+      "testMatch": ["**/__tests__/mocks/*.mock.test.ts"],
+      "moduleNameMapper": {
+        "^uuid$": "<rootDir>/src/__tests__/integration/__mocks__/uuid.js"
+      },
+      "transform": {
+        "^.+\\.tsx?$": ["ts-jest", { "diagnostics": false }]
+      },
+      "testTimeout": 10000
+    }
+  ]
 }
