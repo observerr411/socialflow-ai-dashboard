@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
+import { expressMiddleware } from '@as-integrations/express4';
 import { requestIdMiddleware } from './middleware/requestId';
 import { compressionMiddleware } from './middleware/compression';
 import { errorHandler, notFoundHandler } from './middleware/error';
@@ -12,6 +13,8 @@ import { sliMiddleware } from './middleware/sliMiddleware';
 import v1Router from './routes/v1';
 import metricsRouter from './routes/metrics';
 import { swaggerSpec } from './config/swagger';
+import { createApolloServer } from './graphql';
+import { buildContext } from './graphql/context';
 
 // Initialise rate limiters (resolves Redis store in production)
 export const rateLimitersReady = initRateLimiters();
@@ -62,6 +65,20 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // Prometheus metrics scrape endpoint
 app.use('/metrics', metricsRouter);
+
+// ── GraphQL ───────────────────────────────────────────────────────────────────
+
+// Apollo Server must be started before attaching the middleware.
+// We export the promise so server.ts can await it during startup.
+const apolloServer = createApolloServer();
+export const apolloReady = apolloServer.start().then(() => {
+  app.use(
+    '/graphql',
+    cors<cors.CorsRequest>(),
+    express.json(),
+    expressMiddleware(apolloServer, { context: buildContext }),
+  );
+});
 
 // ── Error handling ────────────────────────────────────────────────────────────
 

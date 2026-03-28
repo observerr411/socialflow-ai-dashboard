@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 // Validate all environment variables at startup — throws if any required var is missing/invalid.
 import { config } from './config/config';
-import app from './app';
+import app, { apolloReady } from './app';
 import { SocketService } from './services/SocketService';
 import { initializeWorkers } from './jobs/workers';
 import { startWorkers } from './workers/index';
@@ -312,6 +312,9 @@ const bootstrap = async (): Promise<void> => {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+
+    // Start Apollo Server and register /graphql middleware
+    await apolloReady;
 
     // Start HTTP server
     serverInstance = app.listen(PORT, () => {
