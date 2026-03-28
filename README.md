@@ -17,6 +17,25 @@
 
 ---
 
+## ⚠️ Implementation Status Warning
+
+> **Operators and contributors: read this before deploying.**
+>
+> Several features described in this README are **not yet implemented** and exist only as UI stubs or placeholder interactions. Specifically:
+>
+> - **Post scheduling** — ⚠️ Stub — clicking "Schedule Post" logs to the console and shows a browser `alert()`. No post is dispatched to any platform.
+> - **Analytics & dashboard metrics** — ⚠️ Stub — all numbers are hardcoded static data. No real analytics API is called. The "Best Posting Times" heatmap re-randomizes on every render.
+> - **Stellar / Soroban / NFT / IPFS** — ❌ Not implemented — none of these integrations exist in the codebase despite being described below.
+> - **Worker queue** — ❌ Not implemented — there is no queue infrastructure (no Bull, BullMQ, Redis, etc.). No job is ever enqueued.
+> - **Settings** — ⚠️ Stub — all toggles are backed by `useState` only and reset on every page reload. Account sub-pages have no `onClick` handlers.
+> - **Electron IPC** — ⚠️ Stub — the preload bridge exposes `sendMessage` but `electron/main.js` has no `ipcMain` listeners; all messages are silently dropped.
+>
+> The only production-ready features are **AI caption generation** and **AI reply suggestions**, both of which require a valid `API_KEY` for Google Generative AI.
+>
+> For a full per-feature breakdown including required env vars, expected outputs, and side effects, see **[docs/worker-queue-status.md](docs/worker-queue-status.md)**.
+
+---
+
 ## 💎 The SocialFlow Paradigm
 
 SocialFlow is a state-of-the-art **social media management and promoting application** designed to restore sovereignty to digital creators. By converging Large Language Models (LLMs) with Decentralized Ledger Technology (DLT), we provide a suite of management, orchestration, and economic primitives that are transparent, non-custodial, and hyper-automated.
