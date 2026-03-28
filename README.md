@@ -63,6 +63,41 @@ Because no moderation system exists, there is no moderation outage to detect or 
 
 ---
 
+## 🔏 Upload Signature Security
+
+> **This section documents the absence of upload signature verification, not the presence of it. Read before deploying.**
+
+### Current State — ❌ No Upload Signing or Verification Exists
+
+SocialFlow has no server-side upload handler and no signature verification system. The only upload-related code is in `components/MediaLibrary.tsx`, which uses `URL.createObjectURL()` to preview files locally in the browser. No file is transmitted to any server, signed, or verified.
+
+This means:
+
+- There is no upload endpoint — files never leave the client.
+- There is no signing algorithm, no signing key, and no required env vars for upload security.
+- There are no demo/bypass flags (e.g. `SKIP_SIGNATURE_VERIFY`) because there is no verification system to bypass.
+- Pinata and IPFS are referenced in the roadmap spec (`design.md`, `requirements.md`) as planned future features — they are not implemented.
+
+### Production Checklist
+
+No upload security checklist applies to the current codebase. When a server-side upload handler and signature verification are implemented, this section should document:
+
+- Required env vars (signing key, algorithm, expiry)
+- Key rotation guidance
+- ⛔ Forbidden in production: any flag that disables signature enforcement (e.g. `SKIP_SIGNATURE_VERIFY=true`, hardcoded demo secrets)
+
+### Signature Verification Flow
+
+No verification flow exists. When implemented, this section should describe how a valid upload request is signed, how the server verifies the signature, and what error response is returned on failure.
+
+### Threat Model
+
+No upload threat model applies to the current codebase. When server-side uploads are introduced, this section should cover what attacks signature verification prevents (unauthorized uploads, payload tampering) and what it does not protect against (scope boundaries).
+
+> All subsections above are forward-looking guidance for when upload signing is eventually implemented. None apply to the current codebase.
+
+---
+
 ## 🔒 Health & Config Route Access Policy
 
 > **This section documents the absence of health endpoints and config routes, not the presence of them. Read before configuring a reverse proxy.**
