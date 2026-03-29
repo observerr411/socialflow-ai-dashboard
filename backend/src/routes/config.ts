@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { dynamicConfigService, ConfigType } from '../services/DynamicConfigService';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { authenticate as authMiddleware } from '../middleware/authenticate';
 
 const router = Router();
 
