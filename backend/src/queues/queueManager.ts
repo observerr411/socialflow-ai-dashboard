@@ -1,7 +1,9 @@
 import { Queue, Worker, QueueEvents, JobsOptions, ConnectionOptions } from 'bullmq';
-import Redis from 'ioredis';
 import { config } from '../config/config';
 import { createLogger } from '../lib/logger';
+import { redis as redisClient } from '../lib/redis';
+
+export { redisClient };
 
 const logger = createLogger('queue-manager');
 
@@ -68,9 +70,6 @@ function createRedisConnection(): ConnectionOptions {
 
 // Redis connection configuration using REDIS_URL or fallback
 const connection: ConnectionOptions = createRedisConnection();
-
-// Shared ioredis client built from the same validated config path
-export const redisClient = new Redis(createRedisConnection() as any);
 
 // Queue options interface
 export interface QueueConfig {
