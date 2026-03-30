@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "backend"
   ],
   "scripts": {
     "dev": "npx vite",
